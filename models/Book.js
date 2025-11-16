@@ -47,8 +47,8 @@ const BookSchema = new mongoose.Schema(
             type: Double,
             default: 0
         },
-        timestamps: true
-    }
+    },
+    { timestamps: true }
 );
 
 export default mongoose.model('Book', BookSchema);
