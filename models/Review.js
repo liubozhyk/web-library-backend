@@ -2,16 +2,13 @@ import mongoose from "mongoose";
 
 const ReviewSchema = mongoose.Schema(
     {
-        bookId: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: true,
-        },
         userId: {
             type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
             required: true,
         },
         rating: {
-            type: Double,
+            type: Number,
             required: true,
         },
         comment: {
@@ -22,4 +19,4 @@ const ReviewSchema = mongoose.Schema(
     { timestamps: true }
 );
 
-export default mongoose.model('Review', ReviewSchema);
+export default ReviewSchema;

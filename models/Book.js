@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import reviews from './Review.js'
 
 const BookSchema = new mongoose.Schema(
     {
@@ -24,7 +25,7 @@ const BookSchema = new mongoose.Schema(
             required: true
         },
         genre: {
-            type: String,
+            type: [String],
             required: true
         },
         coverImageUrl: {
@@ -44,9 +45,10 @@ const BookSchema = new mongoose.Schema(
             default: 0
         },
         averageRating: {
-            type: Double,
+            type: Number,
             default: 0
         },
+        reviews: [reviews]
     },
     { timestamps: true }
 );
