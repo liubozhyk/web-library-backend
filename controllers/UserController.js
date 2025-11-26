@@ -110,8 +110,50 @@ export const getMe = async (req, res) => {
     }
 }
 
-// Think about it!!
 export const updateMe = async (req, res) => {
+    try {
+        let avatarImageUrl = '';
+        const password = req.body.password;
+        const salt = await bcrypt.genSalt(Number(process.env.BCRYPT_SALT));
+        const hash = await bcrypt.hash(password, salt);
 
+        const user = await User.findById(req.userId)
 
+        if (req.file) {
+            if (avatarImageUrl !== '') {
+                await fsPromises.rm(user.avatarUrl).then(console.log(`deletion complete`));
+            }
+            avatarImageUrl = req.file.path;
+        }
+
+        await User.updateOne(
+            {
+                _id: req.userId
+            },
+            {
+                username: req.body.username,
+                email: req.body.email,
+                password: hash,
+                avatarUrl: avatarImageUrl
+            }
+        )
+
+        const token = jwt.sign(
+            {
+                _id: user._id,
+            },
+            process.env.SECRET,
+            {
+                expiresIn: '30d'
+            }
+        );
+
+        const { passwordHash, ...userData } = user._doc;
+        res.json({ userData, token })
+    } catch (error) {
+        console.log(error);
+        res.status(404).json({
+            message: 'Unsuccessful update!'
+        });
+    }
 }

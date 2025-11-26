@@ -1,13 +1,23 @@
 import Book from '../models/Book.js'
 import multer from "multer";
+import { Poppler } from 'node-poppler';
 import path from 'path';
+import { promises as fsPromises } from "fs";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const bookStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'uploads/books')
     },
     filename: (req, file, cb) => {
-        cb(null, 'book_' + Date.now() + path.extname(file.originalname))
+        if (file.fieldname === 'fileUrl') {
+            cb(null, 'book_' + Date.now() + path.extname(file.originalname))
+        } else if (file.fieldname === 'bookCoverImage') {
+            cb(null, 'bookCover_' + Date.now() + path.extname(file.originalname))
+        }
     }
 })
 
@@ -26,7 +36,9 @@ export const getAllBooks = async (req, res) => {
     }
 }
 
-export const getOneBookInfo = async (req, res) => {
+// export const getBookPreview = async (req, res) => {}
+
+export const getOneBook = async (req, res) => {
     try {
         const bookId = req.params.id;
 
@@ -40,21 +52,8 @@ export const getOneBookInfo = async (req, res) => {
             {
                 returnDocument: 'after',
             },
-            (err, doc) => {
-                if (err) {
-                    console.log(err);
-                    return res.status(500).json({
-                        message: 'Unable to update!'
-                    });
-                }
-                if (!doc) {
-                    return res.status(404).json({
-                        message: 'Book isn\'t found'
-                    });
-                }
-            }
         ).populate({
-            path: 'reviews.user',
+            path: 'reviews.userId',
             select: 'username'
         }).exec()
             .then(book => { res.json(book) })
@@ -72,45 +71,22 @@ export const getOneBookInfo = async (req, res) => {
     }
 }
 
-// Think about how to connect multer to download file + update a download counter
-export const getOneBook = async (req, res) => {
+export const downloadOneBook = async (req, res) => {
     try {
         const bookId = req.params.id;
 
-        Book.findOneAndUpdate(
+        const book = await Book.findOneAndUpdate(
             {
                 _id: bookId,
             },
             {
-                $inc: { dowloadCount: 1 }
+                $inc: { downloadCount: 1 }
             },
             {
                 returnDocument: 'after',
-            },
-            (err, doc) => {
-                if (err) {
-                    console.log(err);
-                    return res.status(500).json({
-                        message: 'Unable to update!'
-                    })
-                }
-                if (!doc) {
-                    return res.status(404).json({
-                        message: 'Book isn\'t found'
-                    })
-                }
-            }
-        ).populate({
-            path: 'reviews.user',
-            select: 'username'
-        }).exec()
-            .then(book => { res.json(book) })
-            .catch(err => {
-                console.log(err);
-                res.status(404).json({
-                    message: 'Book isn\'t found'
-                })
-            })
+            });
+
+        return res.sendFile(path.join(__dirname, '..', book.fileUrl));
     } catch (error) {
         console.log(error);
         res.status(404).json({
@@ -119,16 +95,102 @@ export const getOneBook = async (req, res) => {
     }
 }
 
-// Think about creation/deletion/udpating of book by admin
 export const createBook = async (req, res) => {
+    try {
+        const genres = req.body.genres;
+        const coverImageUrl = path.join('uploads', 'bookCovers', `${path.basename(req.file.path, path.extname(req.file.path))}_cover.png`);
+        const previewUrl = path.join('uploads', 'bookPreviews', `${path.basename(req.file.path, path.extname(req.file.path))}_preview.pdf`);
+        const poppler = new Poppler();
+        const optionsForCover = {
+            pngFile: true,
+            singleFile: true,
+            firstPageToConvert: 1,
+            lastPageToConvert: 1,
+        };
 
+        const optionsForPreview = {
+            pdfFile: true,
+            firstPageToConvert: 5,
+            lastPageToConvert: 8
+        }
+
+        try {
+            await poppler.pdfToCairo(req.file.path, path.join('uploads', 'bookCovers', `${path.basename(req.file.path, path.extname(req.file.path))}_cover`), optionsForCover);
+            await poppler.pdfToCairo(req.file.path, path.join('uploads', 'bookPreviews', `${path.basename(req.file.path, path.extname(req.file.path))}_preview.pdf`), optionsForPreview);
+        } catch (error) {
+            console.log(error);
+            res.status(500);
+        };
+
+        const Book_Collection = new Book({
+            title: req.body.title,
+            author: req.body.author,
+            publisher: req.body.publisher,
+            publicationYear: req.body.publicationYear,
+            description: req.body.description,
+            genres: genres.split(', '),
+            coverImageUrl: coverImageUrl,
+            fileUrl: req.file.path,
+            priviewUrl: previewUrl
+        });
+
+        const book = await Book_Collection.save();
+        res.json(book);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            message: `Unsuccessful creation!`
+        })
+    }
 }
 
 export const deleteBook = async (req, res) => {
+    try {
+        const bookId = req.params.id;
+        const book = await Book.findByIdAndDelete(bookId);
 
+        await fsPromises.unlink(book.priviewUrl);
+        await fsPromises.unlink(book.coverImageUrl);
+        await fsPromises.unlink(book.fileUrl);
+
+        res.json({
+            message: 'Successful delete!',
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(404).json({
+            message: 'Unsuccessful delete!'
+        });
+    }
 }
 
 export const updateBook = async (req, res) => {
+    try {
+        const bookId = req.params.id;
+        const book = await Book.findById(bookId);
 
+        if (!book) {
+            return res.status(404).json({ message: 'Book isn\'t found!' });
+        }
+
+        await Book.updateOne(
+            {
+                _id: bookId
+            },
+            {
+                title: req.body.title,
+                author: req.body.author,
+                publisher: req.body.publisher,
+                publicationYear: req.body.publicationYear,
+                description: req.body.description,
+            }
+        )
+
+    } catch (error) {
+        console.log(error);
+        res.status(404).json({
+            message: 'Unsuccessful update!'
+        });
+    }
 }
-

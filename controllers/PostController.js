@@ -1,6 +1,6 @@
 import multer from "multer";
 import path from 'path';
-import { promises as fs } from "fs";
+import { promises as fsPromises } from "fs";
 import Post from "../models/Post.js"
 
 const postStorage = multer.diskStorage({
@@ -79,15 +79,17 @@ export const createPost = async (req, res) => {
 export const deleteOnePost = async (req, res) => {
     try {
         const postId = req.params.id;
-        await Post.findByIdAndDelete(postId);
+        const post = await Post.findByIdAndDelete(postId);
+
+        await fsPromises.unlink(post.imageUrl);
 
         res.json({
-            message: 'success!!',
+            message: 'Successful delete!',
         });
     } catch (error) {
         console.log(error);
         res.status(404).json({
-            message: 'Unsuccessful deletion!'
+            message: 'Unsuccessful delete!'
         });
     }
 }
@@ -98,19 +100,19 @@ export const updateOnePost = async (req, res) => {
         const post = await Post.findById(postId);
 
         if (!post) {
-            return res.status(404).json({ message: 'Post is\'t found!' });
+            return res.status(404).json({ message: 'Post isn\'t found!' });
         }
 
         let postImagePath = post.imageUrl;
 
         if (req.file) {
             if (postImagePath !== '') {
-                await fs.rm(post.imageUrl).then(console.log(`deletion complete`));
+                await fsPromises.unlink(post.imageUrl).then(console.log(`deletion complete`));
             }
             postImagePath = req.file.path;
         }
 
-        await Post.findByIdAndUpdate(
+        await Post.updateOne(
             {
                 _id: postId,
             },
@@ -121,7 +123,7 @@ export const updateOnePost = async (req, res) => {
             }
         );
         res.json({
-            message: 'success!!',
+            message: 'Successful update!',
         });
 
     } catch (error) {
