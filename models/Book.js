@@ -24,15 +24,19 @@ const BookSchema = new mongoose.Schema(
             type: String,
             required: true
         },
-        genre: {
+        genres: {
             type: [String],
             required: true
         },
         coverImageUrl: {
             type: String,
-            required: true
+            // required: true
         },
         fileUrl: {
+            type: String,
+            required: true
+        },
+        priviewUrl: {
             type: String,
             required: true
         },
@@ -40,7 +44,7 @@ const BookSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
-        dowloadCount: {
+        downloadCount: {
             type: Number,
             default: 0
         },
@@ -48,7 +52,10 @@ const BookSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
-        reviews: [reviews]
+        reviews: {
+            type: [reviews],
+            default: []
+        }
     },
     { timestamps: true }
 );
