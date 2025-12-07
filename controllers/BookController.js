@@ -36,8 +36,6 @@ export const getAllBooks = async (req, res) => {
     }
 }
 
-// export const getBookPreview = async (req, res) => {}
-
 export const getOneBook = async (req, res) => {
     try {
         const bookId = req.params.id;
@@ -71,7 +69,7 @@ export const getOneBook = async (req, res) => {
     }
 }
 
-export const downloadOneBook = async (req, res) => {
+export const getBookPreview = async (req, res) => {
     try {
         const bookId = req.params.id;
 
@@ -80,13 +78,13 @@ export const downloadOneBook = async (req, res) => {
                 _id: bookId,
             },
             {
-                $inc: { downloadCount: 1 }
+                $inc: { downloadPreviewCount: 1 }
             },
             {
                 returnDocument: 'after',
             });
 
-        return res.sendFile(path.join(__dirname, '..', book.fileUrl));
+        return res.sendFile(path.join(__dirname, '..', book.priviewUrl));
     } catch (error) {
         console.log(error);
         res.status(404).json({
@@ -110,7 +108,7 @@ export const createBook = async (req, res) => {
 
         const optionsForPreview = {
             pdfFile: true,
-            firstPageToConvert: 5,
+            firstPageToConvert: 1,
             lastPageToConvert: 8
         }
 

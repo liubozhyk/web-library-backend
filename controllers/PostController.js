@@ -27,8 +27,8 @@ export const getAllPosts = async (req, res) => {
         res.json(posts);
     } catch (error) {
         console.log(error);
-        res.status(404).json({
-            message: 'Posts aren\'t found'
+        res.status(500).json({
+            message: 'Error finding a posts!'
         })
     }
 }
@@ -40,15 +40,15 @@ export const getOnePost = async (req, res) => {
 
         if (!post) {
             return res.status(404).json({
-                message: 'Posts aren\'t found'
+                message: 'Post isn\'t found'
             })
         }
 
         res.json(post);
     } catch (error) {
         console.log(error);
-        res.status(404).json({
-            message: 'Post isn\'t found'
+        res.status(500).json({
+            message: 'Error finding a post!'
         })
     }
 }
@@ -79,16 +79,18 @@ export const createPost = async (req, res) => {
 export const deleteOnePost = async (req, res) => {
     try {
         const postId = req.params.id;
-        const post = await Post.findByIdAndDelete(postId);
+        const post = await Post.findByIdAndDelete(postId)
+
+        if (!post) {
+            return res.status(404).json({ message: 'Post isn`t found!' })
+        }
 
         await fsPromises.unlink(post.imageUrl);
 
-        res.json({
-            message: 'Successful delete!',
-        });
+        res.json({ message: 'Successful delete!' });
     } catch (error) {
         console.log(error);
-        res.status(404).json({
+        res.status(500).json({
             message: 'Unsuccessful delete!'
         });
     }

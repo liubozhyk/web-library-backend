@@ -36,6 +36,10 @@ const BookSchema = new mongoose.Schema(
             type: String,
             required: true
         },
+        availableAmount: {
+            type: Number,
+            required: true
+        },
         priviewUrl: {
             type: String,
             required: true
@@ -44,7 +48,7 @@ const BookSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
-        downloadCount: {
+        downloadPreviewCount: {
             type: Number,
             default: 0
         },
