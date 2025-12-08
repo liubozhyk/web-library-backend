@@ -24,23 +24,27 @@ const BookSchema = new mongoose.Schema(
             type: String,
             required: true
         },
-        genres: {
-            type: [String],
+        pageCount: {
+            type: Number,
             required: true
         },
-        coverImageUrl: {
-            type: String,
-            // required: true
-        },
-        fileUrl: {
-            type: String,
+        genres: {
+            type: [String],
             required: true
         },
         availableAmount: {
             type: Number,
             required: true
         },
-        priviewUrl: {
+        coverImageUrl: {
+            type: String,
+            required: true
+        },
+        fileUrl: {
+            type: String,
+            required: true
+        },
+        previewUrl: {
             type: String,
             required: true
         },
@@ -48,7 +52,7 @@ const BookSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
-        downloadPreviewCount: {
+        downloadCount: {
             type: Number,
             default: 0
         },

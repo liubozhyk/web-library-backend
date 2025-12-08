@@ -4,6 +4,7 @@ import { Poppler } from 'node-poppler';
 import path from 'path';
 import { promises as fsPromises } from "fs";
 import { fileURLToPath } from 'url';
+import { PDFParse } from 'pdf-parse';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,6 +35,29 @@ export const getAllBooks = async (req, res) => {
             message: 'Books aren\'t found'
         })
     }
+}
+
+export const getBookPreview = async (req, res) => {
+    try {
+        const bookId = req.params.id;
+
+        const book = await Book.findById(bookId);
+
+        if (!book) {
+            return res.status(404).json({
+                message: 'Book preview isn\'t found'
+            })
+        }
+
+        return res.sendFile(path.join(__dirname, '..', book.previewUrl));
+
+    } catch (error) {
+        console.log(error);
+        res.status(404).json({
+            message: 'Book preview isn\'t found'
+        })
+    }
+
 }
 
 export const getOneBook = async (req, res) => {
@@ -69,7 +93,7 @@ export const getOneBook = async (req, res) => {
     }
 }
 
-export const getBookPreview = async (req, res) => {
+export const downloadOneBook = async (req, res) => {
     try {
         const bookId = req.params.id;
 
@@ -78,13 +102,13 @@ export const getBookPreview = async (req, res) => {
                 _id: bookId,
             },
             {
-                $inc: { downloadPreviewCount: 1 }
+                $inc: { downloadCount: 1 }
             },
             {
                 returnDocument: 'after',
             });
 
-        return res.sendFile(path.join(__dirname, '..', book.priviewUrl));
+        return res.sendFile(path.join(__dirname, '..', book.fileUrl));
     } catch (error) {
         console.log(error);
         res.status(404).json({
@@ -96,9 +120,12 @@ export const getBookPreview = async (req, res) => {
 export const createBook = async (req, res) => {
     try {
         const genres = req.body.genres;
+        const dataBuffer = new Uint8Array(await fsPromises.readFile(req.file.path));
         const coverImageUrl = path.join('uploads', 'bookCovers', `${path.basename(req.file.path, path.extname(req.file.path))}_cover.png`);
         const previewUrl = path.join('uploads', 'bookPreviews', `${path.basename(req.file.path, path.extname(req.file.path))}_preview.pdf`);
         const poppler = new Poppler();
+        const parser = new PDFParse(dataBuffer);
+
         const optionsForCover = {
             pngFile: true,
             singleFile: true,
@@ -111,6 +138,10 @@ export const createBook = async (req, res) => {
             firstPageToConvert: 1,
             lastPageToConvert: 8
         }
+
+        const parsedBook = await parser.getInfo({
+            parsePageInfo: true
+        })
 
         try {
             await poppler.pdfToCairo(req.file.path, path.join('uploads', 'bookCovers', `${path.basename(req.file.path, path.extname(req.file.path))}_cover`), optionsForCover);
@@ -126,10 +157,12 @@ export const createBook = async (req, res) => {
             publisher: req.body.publisher,
             publicationYear: req.body.publicationYear,
             description: req.body.description,
+            availableAmount: req.body.availableAmount,
+            pageCount: parsedBook.total,
             genres: genres.split(', '),
             coverImageUrl: coverImageUrl,
             fileUrl: req.file.path,
-            priviewUrl: previewUrl
+            previewUrl: previewUrl
         });
 
         const book = await Book_Collection.save();
@@ -147,7 +180,7 @@ export const deleteBook = async (req, res) => {
         const bookId = req.params.id;
         const book = await Book.findByIdAndDelete(bookId);
 
-        await fsPromises.unlink(book.priviewUrl);
+        await fsPromises.unlink(book.previewUrl);
         await fsPromises.unlink(book.coverImageUrl);
         await fsPromises.unlink(book.fileUrl);
 
