@@ -108,7 +108,7 @@ export const downloadOneBook = async (req, res) => {
                 returnDocument: 'after',
             });
 
-        return res.sendFile(path.join(__dirname, '..', book.fileUrl));
+        res.download(path.join(__dirname, '..', book.fileUrl));
     } catch (error) {
         console.log(error);
         res.status(404).json({
