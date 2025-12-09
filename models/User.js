@@ -48,7 +48,7 @@ const UserSchema = new mongoose.Schema(
                 ref: 'Book',
                 required: true
             },
-            ViewedDate: {
+            viewedDate: {
                 type: Date,
                 default: Date.now
             }

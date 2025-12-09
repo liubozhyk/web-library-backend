@@ -157,3 +157,35 @@ export const updateMe = async (req, res) => {
         });
     }
 }
+
+export const addBookToWishlist = async (req, res) => {
+    const bookId = req.params.bookId;
+
+    try {
+        await User.updateOne(
+            { _id: req.userId },
+            { $addToSet: { wishlist: { bookId } } }
+        )
+
+        return res.status(200).json({ message: 'Added successfully!' })
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Error adding book to wishlist!' })
+    }
+}
+
+export const removeFromWishlist = async (req, res) => {
+    const bookId = req.params.bookId;
+
+    try {
+        await User.updateOne(
+            { _id: req.userId },
+            { $pull: { wishlist: { bookId } } }
+        )
+
+        return res.status(200).json({ message: 'Removed successfully!' })
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Error removing book to wishlist!' })
+    }
+}
