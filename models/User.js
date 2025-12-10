@@ -39,7 +39,7 @@ const UserSchema = new mongoose.Schema(
             },
             dueDate: {
                 type: Date,
-                default: () => new Date(Date.now + 14 * 24 * 60 * 60 * 1000),
+                default: () => new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
             }
         }],
         viewHistory: [{

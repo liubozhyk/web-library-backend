@@ -1,10 +1,12 @@
 import Book from '../models/Book.js'
+import User from '../models/User.js';
 import multer from "multer";
 import { Poppler } from 'node-poppler';
 import path from 'path';
 import { promises as fsPromises } from "fs";
 import { fileURLToPath } from 'url';
 import { PDFParse } from 'pdf-parse';
+import { aborted } from 'util';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,7 +16,7 @@ const bookStorage = multer.diskStorage({
         cb(null, 'uploads/books')
     },
     filename: (req, file, cb) => {
-        if (file.fieldname === 'fileUrl') {
+        if (file.fieldname === 'bookFile') {
             cb(null, 'book_' + Date.now() + path.extname(file.originalname))
         } else if (file.fieldname === 'bookCoverImage') {
             cb(null, 'bookCover_' + Date.now() + path.extname(file.originalname))
@@ -63,13 +65,31 @@ export const getBookPreview = async (req, res) => {
 export const getOneBook = async (req, res) => {
     try {
         const bookId = req.params.id;
+        if (req.userAuth) {
+            const userId = req.userId;
 
-        Book.findOneAndUpdate(
+            try {
+                await User.updateOne(
+                    { _id: userId, viewHistory: { bookId } },
+                    { $pull: { viewHistory: { bookId } } }
+                );
+                await User.updateOne(
+                    { _id: userId },
+                    { $push: { viewHistory: { bookId } } }
+                );
+            } catch (error) {
+                console.log(error);
+                res.status(500).json({ message: 'Error recording history!' })
+            }
+        }
+
+        const book = await Book.findOneAndUpdate(
             {
                 _id: bookId,
             },
             {
                 $inc: { viewCount: 1 }
+
             },
             {
                 returnDocument: 'after',
@@ -85,6 +105,7 @@ export const getOneBook = async (req, res) => {
                     message: 'Book isn\'t found'
                 })
             })
+        res.json(book);
     } catch (error) {
         console.log(error);
         res.status(404).json({
@@ -158,7 +179,7 @@ export const createBook = async (req, res) => {
             publicationYear: req.body.publicationYear,
             description: req.body.description,
             availableAmount: req.body.availableAmount,
-            pageCount: parsedBook.total,
+            totalPages: parsedBook.total,
             genres: genres.split(', '),
             coverImageUrl: coverImageUrl,
             fileUrl: req.file.path,
@@ -166,7 +187,7 @@ export const createBook = async (req, res) => {
         });
 
         const book = await Book_Collection.save();
-        res.json(book);
+        return res.json(book);
     } catch (error) {
         console.log(error);
         res.status(500).json({
@@ -225,3 +246,124 @@ export const updateBook = async (req, res) => {
         });
     }
 }
+
+export const addToWishlist = async (req, res) => {
+    const bookId = req.params.id;
+
+    try {
+        await User.updateOne(
+            { _id: req.userId },
+            { $addToSet: { wishlist: { bookId } } }
+        )
+
+        return res.status(200).json({ message: 'Added successfully!' })
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Error adding book to wishlist!' })
+    }
+}
+
+export const removeFromWishlist = async (req, res) => {
+    const bookId = req.params.id;
+
+    try {
+        await User.updateOne(
+            { _id: req.userId },
+            { $pull: { wishlist: { bookId } } }
+        )
+
+        return res.status(200).json({ message: 'Removed successfully!' })
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Error removing book to wishlist!' })
+    }
+}
+
+export const borrowBook = async (req, res) => {
+    const bookId = req.params.id;
+
+    try {
+        await User.updateOne(
+            { _id: req.userId },
+            { $addToSet: { loans: { bookId, loanDate: new Date() } } }
+        ).catch(err => {
+
+        });
+
+        const book = await Book.findById(bookId);
+        if (book.availableAmount <= 0) {
+            return res.status(400).json({ message: 'Book isn\'t available to borrow!' })
+        }
+
+        await Book.updateOne(
+            { _id: bookId },
+            { $inc: { availableAmount: -1 } }
+        )
+
+        return res.status(200).json({ message: 'Book loaned successfully!' })
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Error loaning book!' })
+    }
+}
+
+export const commentBook = async (req, res) => {
+    const bookId = req.params.id;
+
+    try {
+        await Book.updateOne(
+            { _id: bookId },
+            {
+                $push: {
+                    reviews: {
+                        userId: req.userId,
+                        comment: req.body.comment,
+                        rating: req.body.rating
+                    }
+                }
+            },
+        );
+
+        const book = await Book.findOneAndUpdate(
+            {
+                _id: bookId,
+            },
+            [
+                {
+                    $set: { averageRating: { $avg: '$reviews.rating' } }
+                }
+            ],
+            {
+                new: true,
+                runValidators: true,
+            }
+        );
+
+        return res.status(200).json({ message: 'Comment added successfully!', book })
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Error commenting book!' })
+    }
+}
+
+// export const updateComment = async (req, res) => {
+//     const bookId = req.params.id;
+//     const commentId = req.params.commentId;
+
+//     await Book.updateOne(
+//         { _id: bookId, 'reviews._id': commentId, 'reviews.userId': req.userId },
+//         {
+//             $set: {
+//                 'reviews.$.comment': req.body.comment,
+//                 'reviews.$.rating': req.body.rating
+//             }
+//         }
+//     );
+
+
+// }
+
+// export const deleteComment = async (req, res) => {
+//     const bookId = req.params.id;
+//     const commentId = req.params.commentId;
+// }

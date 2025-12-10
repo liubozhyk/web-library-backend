@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import Book from '../models/Book.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
@@ -22,13 +23,13 @@ export const register = async (req, res) => {
     try {
         const password = req.body.password;
         const salt = await bcrypt.genSalt(Number(process.env.BCRYPT_SALT));
-        const hash = await bcrypt.hash(password, salt);
+        const hash = await bcrypt.hash(req.body.password.toString(), salt);
 
         const User_collection = new User(
             {
                 username: req.body.username,
                 email: req.body.email,
-                passwordHash: hash
+                passwordHash: hash,
             }
         );
         const user = await User_collection.save();
@@ -84,6 +85,7 @@ export const login = async (req, res) => {
         const { passwordHash, ...userData } = user._doc;
         res.json({ userData, token })
     } catch (error) {
+        console.log(error);
         res.status(401).json({
             message: `Unsuccessful login!`
         });
@@ -158,34 +160,3 @@ export const updateMe = async (req, res) => {
     }
 }
 
-export const addBookToWishlist = async (req, res) => {
-    const bookId = req.params.bookId;
-
-    try {
-        await User.updateOne(
-            { _id: req.userId },
-            { $addToSet: { wishlist: { bookId } } }
-        )
-
-        return res.status(200).json({ message: 'Added successfully!' })
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: 'Error adding book to wishlist!' })
-    }
-}
-
-export const removeFromWishlist = async (req, res) => {
-    const bookId = req.params.bookId;
-
-    try {
-        await User.updateOne(
-            { _id: req.userId },
-            { $pull: { wishlist: { bookId } } }
-        )
-
-        return res.status(200).json({ message: 'Removed successfully!' })
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: 'Error removing book to wishlist!' })
-    }
-}

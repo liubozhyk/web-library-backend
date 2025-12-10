@@ -7,6 +7,6 @@ export const postsRouter = express.Router();
 
 postsRouter.get('/', getAllPosts);
 postsRouter.get('/:id', getOnePost);
-postsRouter.post('/new', checkAuth, checkAdminAuth, postUpload.single('imageUrl'), createPost);
-postsRouter.patch('/:id', checkAuth, checkAdminAuth, postUpload.single('imageUrl'), updateOnePost);
+postsRouter.post('/new', checkAuth, checkAdminAuth, postUpload.single('postImage'), createPost);
+postsRouter.patch('/:id', checkAuth, checkAdminAuth, postUpload.single('postImage'), updateOnePost);
 postsRouter.delete('/:id', checkAuth, checkAdminAuth, deleteOnePost);
