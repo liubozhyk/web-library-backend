@@ -1,5 +1,4 @@
 import User from '../models/User.js';
-import Book from '../models/Book.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
@@ -23,7 +22,7 @@ export const register = async (req, res) => {
     try {
         const password = req.body.password;
         const salt = await bcrypt.genSalt(Number(process.env.BCRYPT_SALT));
-        const hash = await bcrypt.hash(req.body.password.toString(), salt);
+        const hash = await bcrypt.hash(password.toString(), salt);
 
         const User_collection = new User(
             {
@@ -160,3 +159,28 @@ export const updateMe = async (req, res) => {
     }
 }
 
+export const deleteUser = async (req, res) => {
+    const userToDelete = (req.params.id && req.isAdminAuth) ? req.params.id : req.userId;
+
+    try {
+        const user = await User.findByIdAndDelete(
+            { _id: userToDelete }
+        );
+
+
+        if (!user) {
+            return res.status(404).json({
+                message: 'User not found!'
+            });
+        }
+
+        res.json({
+            message: 'User deleted successfully!'
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            message: 'Unsuccessful deletion!'
+        });
+    }
+}
