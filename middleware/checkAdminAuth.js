@@ -1,8 +1,8 @@
-import dotenv from 'dotenv';
 import User from '../models/User.js';
 
 export default async (req, res, next) => {
     try {
+        req.isAdminAuth = false;
         const adminUser = await User.findById(req.userId);
 
         if (!adminUser) {
@@ -12,10 +12,11 @@ export default async (req, res, next) => {
         }
 
         if (adminUser.role === 'admin') {
+            req.isAdminAuth = true;
             next();
         } else {
             res.status(403).json({
-                message: 'No rights to make it!'
+                message: 'No rights to do it!'
             })
         }
 
@@ -24,5 +25,4 @@ export default async (req, res, next) => {
             message: 'Error in db!'
         })
     }
-
 }
