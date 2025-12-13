@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import Book from '../models/Book.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
@@ -182,5 +183,35 @@ export const deleteUser = async (req, res) => {
         res.status(500).json({
             message: 'Unsuccessful deletion!'
         });
+    }
+}
+
+export const getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find().select('-passwordHash').exec();
+        return res.json(users);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            message: 'Unsuccessful retrieval of users!'
+        });
+    }
+}
+
+export const deleteLoanFromUser = async (userId, bookId) => {
+    try {
+        const loan = req.params.loanId;
+        await User.updateOne(
+            { _id: userId },
+            { $pull: { activeLoans: { _id: loan } } }
+        );
+        await Book.updateOne(
+            { _id: bookId },
+            { $inc: { availableAmount: 1 } }
+        );
+
+        return res.status(200).json({ message: 'Loan deleted successfully!' });
+    } catch (error) {
+        console.log('Error deleting loan from user:', error);
     }
 }
