@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import { loansScheduler } from './schedulers/LoansEmailScheduler.js';
 import { usersRouter } from './routes/usersRoute.js';
 import { booksRouter } from './routes/booksRoute.js';
 import { postsRouter } from './routes/postsRoute.js';
@@ -8,7 +9,10 @@ import { postsRouter } from './routes/postsRoute.js';
 dotenv.config();
 
 mongoose.connect(process.env.MONGODB_URL)
-    .then(() => console.log('MongoDB connected successfully'))
+    .then(() => {
+        console.log('Connected to MongoDB');
+        loansScheduler();
+    })
     .catch((err) => console.error(err));
 
 const app = express();
