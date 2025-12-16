@@ -53,6 +53,8 @@ const UserSchema = new mongoose.Schema(
                 default: Date.now
             }
         }],
+        resetCodeHash: String,
+        resetCodeExpires: Date,
     },
     { timestamps: true }
 );
