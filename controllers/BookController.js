@@ -75,33 +75,24 @@ export const getOneBook = async (req, res) => {
                 );
             } catch (error) {
                 console.log(error);
-                res.status(500).json({ message: 'Error recording history!' })
+                return res.status(500).json({ message: 'Error recording history!' });
             }
         }
 
         const book = await Book.findOneAndUpdate(
-            {
-                _id: bookId,
-            },
-            {
-                $inc: { viewCount: 1 }
-
-            },
-            {
-                returnDocument: 'after',
-            },
+            { _id: bookId },
+            { $inc: { viewCount: 1 } },
+            { returnDocument: 'after' },
         ).populate({
             path: 'reviews.userId',
             select: 'username'
-        }).exec()
-            .then(book => { res.json(book) })
-            .catch(err => {
-                console.log(err);
-                res.status(404).json({
-                    message: 'Book isn\'t found'
-                })
-            })
-        res.json(book);
+        }).exec();
+
+        if (!book) {
+            return res.status(404).json({ message: 'Book isn\'t found' });
+        }
+
+        return res.json(book);
     } catch (error) {
         console.log(error);
         res.status(404).json({
@@ -175,7 +166,7 @@ export const createBook = async (req, res) => {
             publicationYear: req.body.publicationYear,
             description: req.body.description,
             availableAmount: req.body.availableAmount,
-            totalPages: parsedBook.total,
+            totalPages: parsedBook?.numpages || 0,
             genres: genres.split(', '),
             coverImageUrl: coverImageUrl,
             fileUrl: req.file.path,
@@ -232,6 +223,8 @@ export const updateBook = async (req, res) => {
                 publisher: req.body.publisher,
                 publicationYear: req.body.publicationYear,
                 description: req.body.description,
+                ...(req.body.availableAmount !== undefined && { availableAmount: req.body.availableAmount }),
+                ...(req.body.genres && { genres: Array.isArray(req.body.genres) ? req.body.genres : String(req.body.genres).split(',').map(g => g.trim()).filter(Boolean) }),
             }
         )
 
