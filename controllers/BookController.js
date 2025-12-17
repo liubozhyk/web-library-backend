@@ -166,7 +166,7 @@ export const createBook = async (req, res) => {
             publicationYear: req.body.publicationYear,
             description: req.body.description,
             availableAmount: req.body.availableAmount,
-            totalPages: parsedBook?.numpages || 0,
+            totalPages: parsedBook?.total || 0,
             genres: genres.split(', '),
             coverImageUrl: coverImageUrl,
             fileUrl: req.file.path,
